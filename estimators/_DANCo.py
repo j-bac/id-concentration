@@ -6,6 +6,7 @@
 ### https://cran.r-project.org/web/packages/intrinsicDimension/index.html
 ### for the R implementation
 
+import sys
 import numpy as np
 import pickle
 from sklearn.neighbors import NearestNeighbors
@@ -31,8 +32,8 @@ def KLd(dhat, dcal, k):
     return(H_k*quo - np.log(quo) - (k-1)*np.sum(a))
 
 def KLnutau(nu1, nu2, tau1, tau2):
-    return(np.log(i0(tau2)/i0(tau1)) + 
-        i1(tau1)/i0(tau1)*(tau1 - tau2*np.cos(nu1-nu2)))
+    return(np.log(min(sys.float_info.max,i0(tau2))/min(sys.float_info.max,i0(tau1))) + 
+        min(sys.float_info.max,i1(tau1))/min(sys.float_info.max,i0(tau1))*(tau1 - tau2*np.cos(nu1-nu2)))
 
 def nlld(d, rhos, k, N):
     return(-lld(d, rhos, k, N))
