@@ -63,9 +63,9 @@ def twonn(data, return_xy=False):
     
     
     data = np.array(data)
-    
+
     N = len(data)
-    
+
     ### OLD CODE ###
     #mu = []
     #for i,x in enumerate(data):
@@ -74,7 +74,7 @@ def twonn(data, return_xy=False):
     #    r1, r2 = dist[dist>0][:2]
     #
     #    mu.append((i+1,r2/r1))
-    
+
     #mu = r2/r1 for each data point
     if data.shape[1] > 25: #relatively high dimensional data, use distance matrix generator
         distmat_chunks = pairwise_distances_chunked(data)
@@ -85,12 +85,16 @@ def twonn(data, return_xy=False):
             r1, r2 = x[:,1], x[:,2]
             _mu[i:i+len(x)] = (r2/r1)
             i += len(x)
-        mu = list(zip(np.arange(1,N+1), _mu))
-        
+
+        _mu[np.argsort(_mu)[:int(N*.9)]] #discard the 10% largest distances
+        mu = list(zip(np.arange(1,len(_mu)+1), _mu))
+
     else: #relatively low dimensional data, search nearest neighbors directly
         dists, _ = get_nn(data,k=2)
         r1,r2 = dists[:,0],dists[:,1]
-        mu = list(zip(np.arange(1,N+1),(r2/r1)))
+        _mu = r2/r1
+        _mu = _mu[np.argsort(_mu)[:int(N*.9)]] #discard the 10% largest distances
+        mu = list(zip(np.arange(1,len(_mu)+1),_mu))
 
 
     #permutation function
@@ -107,9 +111,12 @@ def twonn(data, return_xy=False):
     x = np.log([mu[i] for i in sorted(mu.keys())])
     y = np.array([1-F_i[i] for i in sorted(mu.keys())])
 
-    #avoid having log(0)
+    #avoid having log(0), inf value
     x = x[y>0]
     y = y[y>0]
+
+    y = y[np.isfinite(x)]
+    x = x[np.isfinite(x)]
 
     y = -1*np.log(y)
 
