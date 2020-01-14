@@ -234,6 +234,101 @@ def dimension_uniform_sphere(py,alphas):
     
     return n,n_single_estimate,alfa_single_estimate
 
+
+def dimension_uniform_ball_robust(py,alphas):
+    '''modification to return selected index and handle the case where all values are 0'''
+    if len(py)!=len(alphas[0,:]):
+        raise ValueError('length of py (%i) and alpha (%i) does not match'%(len(py),len(alphas[0,:])))
+
+    if np.sum(alphas <= 0) > 0 or np.sum(alphas >= 1) > 0:
+        raise ValueError(['"Alphas" must be a real vector, with alpha range, the values must be within (0,1) interval'])
+
+    #Calculate dimension for each alpha
+    n = np.zeros((len(alphas[0,:])))
+    for i in range(len(alphas[0,:])):
+        if py[i] == 0:
+            #All points are separable. Nothing to do and not interesting
+            n[i]=np.nan
+        else:
+            p  = py[i]
+            a2 = alphas[0,i]**2
+            w = np.log(1-a2)
+            n[i] = lambertw(-(w/(2*np.pi*p*p*a2*(1-a2))))/(-w)
+
+    n[n==np.inf] = float('nan')
+    #Find indices of alphas which are not completely separable 
+    inds = np.where(~np.isnan(n))[0]
+    if inds.size==0:
+        n_single_estimate = np.nan
+        alfa_single_estimate = np.nan
+        return n,n_single_estimate,alfa_single_estimate
+    else:
+        #Find the maximal value of such alpha
+        alpha_max = max(alphas[0,inds])
+        #The reference alpha is the closest to 90 of maximal partially separable alpha
+        alpha_ref = alpha_max*0.9
+        k = np.where(abs(alphas[0,inds]-alpha_ref)==min(abs(alphas[0,:]-alpha_ref)))[0]
+        #Get corresponding values
+        alfa_single_estimate = alphas[0,inds[k]]
+        n_single_estimate = n[inds[k]]
+
+        return n,n_single_estimate,alfa_single_estimate,inds[k]
+
+
+def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_separable'):
+    '''
+    Turn pointwise inseparability probability into pointwise global ID
+    Inputs : 
+        args : same as SeparabilityAnalysis
+        kwargs : 
+            idx : int, string
+                int for custom alpha index
+                'all_separable' to choose alpha where lal points have non-zero inseparability probability
+                'selected' to keep global alpha selected
+    
+    '''
+    if idx == 'all_separable': #all points are separable
+        selected_idx = np.argwhere(np.all(p_alpha!=0,axis=1)).max()
+    elif idx == 'selected': #
+        selected_idx = (n_alpha==n_single).tolist().index(True)   
+    elif idx == int:
+        selected_idx = idx
+    else:
+        raise ValueError('unknown idx parameter')
+        
+    palpha_selected = p_alpha[selected_idx,:]
+    alpha_selected = alphas[0,selected_idx]
+    
+    
+    py=palpha_selected
+    alphas=np.repeat(alpha_selected,len(palpha_selected))[None]
+    
+    if len(py)!=len(alphas[0,:]):
+        raise ValueError('length of py (%i) and alpha (%i) does not match'%(len(py),len(alphas[0,:])))
+
+    if np.sum(alphas <= 0) > 0 or np.sum(alphas >= 1) > 0:
+        raise ValueError(['"Alphas" must be a real vector, with alpha range, the values must be within (0,1) interval'])
+
+    #Calculate dimension for each alpha
+    n = np.zeros((len(alphas[0,:])))
+    for i in range(len(alphas[0,:])):
+        if py[i] == 0:
+            #All points are separable. Nothing to do and not interesting
+            n[i]=np.nan
+        else:
+            p  = py[i]
+            a2 = alphas[0,i]**2
+            w = np.log(1-a2)
+            n[i] = lambertw(-(w/(2*np.pi*p*p*a2*(1-a2))))/(-w)
+
+    n[n==np.inf] = float('nan')
+    #Find indices of alphas which are not completely separable 
+    inds = np.where(~np.isnan(n))[0]
+    print(str(len(inds))+'/'+str(len(py)),'points have nonzero inseparability probability for chosen alpha =',alpha_selected)
+    return n, inds
+
+
+
 def SeparabilityAnalysis(X,ConditionalNumber=10,ProjectOnSphere = 1,alphas = np.array([np.arange(.6,1,.02)]),ProducePlots = 1,ncomp = 0):
     '''
     %Performs standard analysis of separability and produces standard plots. 

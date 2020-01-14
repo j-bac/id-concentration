@@ -28,9 +28,10 @@
 
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances_chunked
+from sklearn.linear_model import LinearRegression
 from ._commonfuncs import get_nn
 
-def twonn(data, return_xy=False):
+def twonn(data, return_xy=False, discard_fraction = 0.1, dist = False):
     """
     Calculates intrinsic dimension of the provided data points with the TWO-NN algorithm.
     
@@ -41,7 +42,10 @@ def twonn(data, return_xy=False):
         2d data matrix. Samples on rows and features on columns.
     return_xy : bool (default=False)
         Whether to return also the coordinate vectors used for the linear fit.
-        
+    discard_fraction : float between 0 and 1
+        Fraction of largest distances to discard (heuristic from the paper)
+    dist : bool (default=False)
+        Whether data is a precomputed distance matrix
     -----------
     Returns:
     
@@ -57,71 +61,45 @@ def twonn(data, return_xy=False):
     
     [1] E. Facco, M. d’Errico, A. Rodriguez & A. Laio
         Estimating the intrinsic dimension of datasets by a minimal neighborhood information (https://doi.org/10.1038/s41598-017-11873-y)
-    
-    
     """
     
     
     data = np.array(data)
-
     N = len(data)
-
-    ### OLD CODE ###
-    #mu = []
-    #for i,x in enumerate(data):
-    #    
-    #    dist = np.sort(np.sqrt(np.sum((x-data)**2, axis=1)))
-    #    r1, r2 = dist[dist>0][:2]
-    #
-    #    mu.append((i+1,r2/r1))
-
-    #mu = r2/r1 for each data point
-    if data.shape[1] > 25: #relatively high dimensional data, use distance matrix generator
-        distmat_chunks = pairwise_distances_chunked(data)
-        _mu = np.zeros((len(data)))
-        i = 0
-        for x in distmat_chunks:
-            x = np.sort(x,axis=1)
-            r1, r2 = x[:,1], x[:,2]
-            _mu[i:i+len(x)] = (r2/r1)
-            i += len(x)
-
-        _mu[np.argsort(_mu)[:int(N*.9)]] #discard the 10% largest distances
-        mu = list(zip(np.arange(1,len(_mu)+1), _mu))
-
-    else: #relatively low dimensional data, search nearest neighbors directly
-        dists, _ = get_nn(data,k=2)
+    
+    if dist:
         r1,r2 = dists[:,0],dists[:,1]
         _mu = r2/r1
-        _mu = _mu[np.argsort(_mu)[:int(N*.9)]] #discard the 10% largest distances
-        mu = list(zip(np.arange(1,len(_mu)+1),_mu))
+        mu = _mu[np.argsort(_mu)[:int(N*(1-discard_fraction))]] #discard the largest distances
+    
+    else:    
+        # mu = r2/r1 for each data point
+        if data.shape[1] > 25: #relatively high dimensional data, use distance matrix generator
+            distmat_chunks = pairwise_distances_chunked(data)
+            _mu = np.zeros((len(data)))
+            i = 0
+            for x in distmat_chunks:
+                x = np.sort(x,axis=1)
+                r1, r2 = x[:,1], x[:,2]
+                _mu[i:i+len(x)] = (r2/r1)
+                i += len(x)
 
+            mu = _mu[np.argsort(_mu)[:int(N*(1-discard_fraction))]] #discard the largest distances
 
-    #permutation function
-    sigma_i = dict(zip(range(1,len(mu)+1), np.array(sorted(mu, key=lambda x: x[1]))[:,0].astype(int)))
+        else: #relatively low dimensional data, search nearest neighbors directly
+            dists, _ = get_nn(data,k=2)
+            r1,r2 = dists[:,0],dists[:,1]
+            _mu = r2/r1
+            mu = _mu[np.argsort(_mu)[:int(N*(1-discard_fraction))]] #discard the largest distances
 
-    mu = dict(mu)
+    # Empirical cumulate
+    Femp = np.arange(int(N*(1-discard_fraction)))/N
 
-    #cdf F(mu_{sigma(i)})
-    F_i = {}
-    for i in mu:
-        F_i[sigma_i[i]] = i/N
+    # Fit line
+    lr = LinearRegression(fit_intercept=False)
+    lr.fit(np.log(mu).reshape(-1,1), -np.log(1-Femp).reshape(-1,1))
 
-    #fitting coordinates
-    x = np.log([mu[i] for i in sorted(mu.keys())])
-    y = np.array([1-F_i[i] for i in sorted(mu.keys())])
-
-    #avoid having log(0), inf value
-    x = x[y>0]
-    y = y[y>0]
-
-    y = y[np.isfinite(x)]
-    x = x[np.isfinite(x)]
-
-    y = -1*np.log(y)
-
-    #fit line through origin to get the dimension
-    d = np.linalg.lstsq(np.vstack([x, np.zeros(len(x))]).T, y, rcond=None)[0][0]
+    d = lr.coef_[0][0] # extract slope
         
     if return_xy:
         return d, x, y

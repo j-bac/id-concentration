@@ -1,4 +1,4 @@
-function [ dimensions, first_moments,indicesknn ] = ANOVA_local_estimator( dataset, centers, varargin  )
+function [ dimensions, first_moments,indicesknn, Us] = ANOVA_local_estimator( dataset, centers, varargin  )
 % ANOVA_LOCAL_ESTIMATOR Estimates the dimension of the manifold in which
 %   the dataset lies at the center points. This code is based on the paper 
 %   
@@ -61,6 +61,7 @@ end
 % Allocations
 dimensions = zeros(size(centers,2),1);
 first_moments = zeros(size(centers,2),1);
+Us = zeros(size(centers,2),1);
 betas = compute_betas(params.D_max);
 
 
@@ -86,6 +87,7 @@ end
 indicesknn = knnsearch(dataset',centers','K',params.k);
 for ii = 1:length(dimensions)
     [U, first_moments(ii)] = compute_statistic(dataset(:,indicesknn(ii,:)), centers(:,ii));
+    Us(ii) = U;
     if params.basic      
         dd = 1;
         while( dd <= length(etas) && U < etas(dd))

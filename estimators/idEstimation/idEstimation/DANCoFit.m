@@ -1,4 +1,4 @@
-function [d,kl,mu2,tau2] = DANCoFit(data,k,varargin)
+function [d,kl,dHat,mu,tau,mu2,tau2] = DANCoFit(data,k,varargin)
 % DANCOFIT  Estmating the intrinsic dimensionality of a dataset
 %
 % function [d,kl] = DANCoFit(data, ParamName,ParamValue, ...)

@@ -44,6 +44,14 @@ def runDANCo(data,k=10,path_to_estimators=path_to_estimators, path_to_matlab = p
                         "data=dlmread('"+path_to_estimators+"/temp_data.txt');cd ('"+path_to_estimators+"');k="+str(k)+";[d,kl,mu2,tau2] = DANCoFit(data',k);save('variables.mat');exit;"""])
     return scipy.io.loadmat(path_to_estimators+'variables.mat')['d'][0]
 
+def runDANCoStats(data,k=10,path_to_estimators=path_to_estimators, path_to_matlab = path_to_matlab):
+    ''' Run matlab script from shell '''
+    path_to_estimators += '/idEstimation/idEstimation/'
+    np.savetxt(path_to_estimators+'temp_data.txt',data)
+    subprocess.call([path_to_matlab,"-nodisplay", "-nosplash", "-nodesktop","-nojvm","-r",
+                        "data=dlmread('"+path_to_estimators+"/temp_data.txt');cd ('"+path_to_estimators+"');k="+str(k)+";[d,kl,dHat,mu,tau,mu2,tau2] = DANCoFit(data',k);save('variables.mat');exit;"""])
+    return scipy.io.loadmat(path_to_estimators+'variables.mat')
+
 def runDANColoop(data,k=10,path_to_estimators=path_to_estimators, path_to_matlab = path_to_matlab):
     ''' Run matlab script from shell '''
     path_to_estimators += '/idEstimation/idEstimation/'
