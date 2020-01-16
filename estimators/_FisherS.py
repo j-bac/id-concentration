@@ -85,9 +85,9 @@ def preprocessing(X,center,dimred,whiten,projectonsphere,ConditionalNumber = 10,
     return X    
 
 @lru_cache()
-def probability_unseparable_sphere(alpha,n):
+def probability_inseparable_sphere(alpha,n):
     ''' 
-    %probability_unseparable_sphere calculate theoretical probability for point
+    %probability_inseparable_sphere calculate theoretical probability for point
     %to be inseparable for dimension n
     %
     %Inputs:
@@ -172,7 +172,7 @@ def checkSeparabilityMultipleAlpha(data,alpha):
     
     #print(counts)
 
-    py = counts/(n-1)
+    py = counts/(n)
     py = py.T
     if addedone:
         py = py[1:-2,:]
@@ -187,7 +187,7 @@ def checkSeparabilityMultipleAlpha(data,alpha):
 def dimension_uniform_sphere(py,alphas):
     '''
     %Gives an estimation of the dimension of uniformly sampled n-sphere
-    %corresponding to the average probability of being unseparable and a margin
+    %corresponding to the average probability of being inseparable and a margin
     %value 
     %
     %Inputs:
@@ -223,6 +223,8 @@ def dimension_uniform_sphere(py,alphas):
     n[n==np.inf] = float('nan')
     #Find indices of alphas which are not completely separable 
     inds = np.where(~np.isnan(n))[0]
+    if len(inds) == 0:
+        raise ValueError('All points are fully separable for any of the chosen alphas')
     #Find the maximal value of such alpha
     alpha_max = max(alphas[0,inds])
     #The reference alpha is the closest to 90 of maximal partially separable alpha
@@ -275,7 +277,7 @@ def dimension_uniform_ball_robust(py,alphas):
         return n,n_single_estimate,alfa_single_estimate,inds[k]
 
 
-def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_separable'):
+def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_inseparable', force_definite_dim=False, verbose=True):
     '''
     Turn pointwise inseparability probability into pointwise global ID
     Inputs : 
@@ -283,25 +285,31 @@ def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_sep
         kwargs : 
             idx : int, string
                 int for custom alpha index
-                'all_separable' to choose alpha where lal points have non-zero inseparability probability
+                'all_inseparable' to choose alpha where lal points have non-zero inseparability probability
                 'selected' to keep global alpha selected
-    
+            force_definite_dim : bool
+                whether to force fully separable points to take the minimum detectable inseparability value (1/(n-1)) (i.e., maximal detectable dimension)
     '''
-    if idx == 'all_separable': #all points are separable
+    
+    if idx == 'all_inseparable': #all points are inseparable
         selected_idx = np.argwhere(np.all(p_alpha!=0,axis=1)).max()
-    elif idx == 'selected': #
+    elif idx == 'selected': #globally selected alpha
         selected_idx = (n_alpha==n_single).tolist().index(True)   
-    elif idx == int:
+    elif type(idx) == int:
         selected_idx = idx
     else:
         raise ValueError('unknown idx parameter')
-        
+    
+    #select palpha and corresponding alpha
     palpha_selected = p_alpha[selected_idx,:]
     alpha_selected = alphas[0,selected_idx]
     
     
-    py=palpha_selected
+    py=palpha_selected.copy()
     alphas=np.repeat(alpha_selected,len(palpha_selected))[None]
+    
+    if force_definite_dim:
+        py[py==0]=1/len(py)
     
     if len(py)!=len(alphas[0,:]):
         raise ValueError('length of py (%i) and alpha (%i) does not match'%(len(py),len(alphas[0,:])))
@@ -322,14 +330,16 @@ def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_sep
             n[i] = lambertw(-(w/(2*np.pi*p*p*a2*(1-a2))))/(-w)
 
     n[n==np.inf] = float('nan')
+    
     #Find indices of alphas which are not completely separable 
     inds = np.where(~np.isnan(n))[0]
-    print(str(len(inds))+'/'+str(len(py)),'points have nonzero inseparability probability for chosen alpha =',alpha_selected)
+    if verbose:
+        print(str(len(inds))+'/'+str(len(py)),'points have nonzero inseparability probability for chosen alpha = '+str(round(alpha_selected,2))+f', force_definite_dim = {force_definite_dim}, limit_maxdim = {limit_maxdim}')
     return n, inds
 
 
 
-def SeparabilityAnalysis(X,ConditionalNumber=10,ProjectOnSphere = 1,alphas = np.array([np.arange(.6,1,.02)]),ProducePlots = 1,ncomp = 0):
+def SeparabilityAnalysis(X,ConditionalNumber = 10,ProjectOnSphere = 1,alphas = np.array([np.arange(.6,1,.02)]),ProducePlots = 1,ncomp = 0,limit_maxdim=False):
     '''
     %Performs standard analysis of separability and produces standard plots. 
     %
@@ -345,8 +355,9 @@ def SeparabilityAnalysis(X,ConditionalNumber=10,ProjectOnSphere = 1,alphas = np.
     %       'Alphas' - a real vector, with alpha range, the values must be given increasing
     %           within (0,1) interval. Default is [0.6,0.62,...,0.98].
     %       'ProducePlots' - a boolean value indicating if the standard plots
-    %           needs to be drawn. Default is true.
-    %       'ncomp' - whether to print number of retained principal components
+    %           need to be drawn. Default is true.
+    %       'ncomp' - bool, whether to print number of retained principal components
+    %       'limit_maxdim' bool, whether to cap estimated maxdim to the embedding dimension
     %Outputs:
     %   n_alpha - effective dimension profile as a function of alpha
     %   n_single - a single estimate for the effective dimension 
@@ -367,6 +378,9 @@ def SeparabilityAnalysis(X,ConditionalNumber=10,ProjectOnSphere = 1,alphas = np.
     [n_alpha,n_single,alpha_single] = dimension_uniform_sphere(py_mean,alphas)
 
     alpha_ind_selected = np.where(n_single==n_alpha)[0]
+    
+    if limit_maxdim:
+        n_single = np.clip(n_single,None,X.shape[1])
     
     if ProducePlots:
         #Define the minimal and maximal dimensions for theoretical graph with
@@ -396,7 +410,7 @@ def SeparabilityAnalysis(X,ConditionalNumber=10,ProjectOnSphere = 1,alphas = np.
         pteor = np.zeros((len(ns),len(alphas[0,:])))
         for k in range(len(ns)):
             for j in range(len(alphas[0,:])):
-                pteor[k,j] = probability_unseparable_sphere(alphas[0,j],ns[k])
+                pteor[k,j] = probability_inseparable_sphere(alphas[0,j],ns[k])
 
         for i in range(len(pteor[:,0])):
             plt.semilogy(alphas[0,:],pteor[i,:],'-',color='r')

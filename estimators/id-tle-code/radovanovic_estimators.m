@@ -15,7 +15,6 @@ n = size(X,1);
 
 id_mle = ones(n,1);
 id_tle = zeros(n,1);
-id_lcd = zeros(n,1);
 id_mom = zeros(n,1);
 id_ed = zeros(n,1);
 id_ged = zeros(n,1);

@@ -2,8 +2,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 
-def mada(x, k = None, comb = "average", DM = False, local = False, 
-    maxDim = 5):
+def mada(x, k = None, comb = "average", DM = False, local = False):
      
     if (DM == False):
         distmat = squareform(pdist(x))
@@ -30,3 +29,8 @@ def mada(x, k = None, comb = "average", DM = False, local = False,
     ests = np.log(2)/np.log(RK/RK2)
     if (local == True):  
         return(ests)
+    
+    if (comb == "average"):
+        return np.mean(ests)
+    elif (comb == "median"):
+        return np.median(ests)

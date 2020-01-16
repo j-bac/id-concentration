@@ -1,7 +1,9 @@
 # To do list:
-- decide which estimators to keep
-- decide which synthetic and real datasets to keep
-- compute subsampling analysis for all synthetic and real datasets
-- get raw statistics from the estimators
-- compute kNN ID estimates/pointwise global estimates (for other estimators also)
-- update datasets
+- number of points vs maximal dimension detectable (1/N) plot p estimate from above **DONE**
+- show our usual separability plots **DONE**
+- just for separability, 10 balls separability/global pointwise ID and local ID **DONE (just have to copy/paste)**
+- cartoon drawing separability from neighbors or from the rest 
+- several examples with variable local ID (MNIST,Nestorowa,ISOLET)
+- subsampling saturation 
+- confirm sphere and balls ID **DONE**
+- separability function with bound max ID **DONE**
