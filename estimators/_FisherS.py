@@ -218,7 +218,7 @@ def dimension_uniform_sphere(py,alphas):
             p  = py[i]
             a2 = alphas[0,i]**2
             w = np.log(1-a2)
-            n[i] = lambertw(-(w/(2*np.pi*p*p*a2*(1-a2))))/(-w)
+            n[i] = np.real(lambertw(-(w/(2*np.pi*p*p*a2*(1-a2)))))/(-w)
  
     n[n==np.inf] = float('nan')
     #Find indices of alphas which are not completely separable 
