@@ -336,7 +336,7 @@ def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_ins
     #Find indices of alphas which are not completely separable 
     inds = np.where(~np.isnan(n))[0]
     if verbose:
-        print(str(len(inds))+'/'+str(len(py)),'points have nonzero inseparability probability for chosen alpha = '+str(round(alpha_selected,2))+f', force_definite_dim = {force_definite_dim}, limit_maxdim = {limit_maxdim}')
+        print(str(len(inds))+'/'+str(len(py)),'points have nonzero inseparability probability for chosen alpha = '+str(round(alpha_selected,2))+f', force_definite_dim = {force_definite_dim}')
     return n, inds
 
 
