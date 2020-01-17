@@ -224,7 +224,9 @@ def dimension_uniform_sphere(py,alphas):
     #Find indices of alphas which are not completely separable 
     inds = np.where(~np.isnan(n))[0]
     if len(inds) == 0:
-        raise ValueError('All points are fully separable for any of the chosen alphas')
+        warnings.warn('All points are fully separable for any of the chosen alphas')
+        return n,np.array([np.nan]),np.nan
+    
     #Find the maximal value of such alpha
     alpha_max = max(alphas[0,inds])
     #The reference alpha is the closest to 90 of maximal partially separable alpha
@@ -327,7 +329,7 @@ def point_inseparability_to_pointID(n_alpha,n_single,p_alpha,alphas,idx='all_ins
             p  = py[i]
             a2 = alphas[0,i]**2
             w = np.log(1-a2)
-            n[i] = lambertw(-(w/(2*np.pi*p*p*a2*(1-a2))))/(-w)
+            n[i] = np.real(lambertw(-(w/(2*np.pi*p*p*a2*(1-a2)))))/(-w)
 
     n[n==np.inf] = float('nan')
     
