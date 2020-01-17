@@ -90,7 +90,7 @@ def radovanovic_estimators_matlab(data, k = 100, path_to_estimators=path_to_esti
     subprocess.call([path_to_matlab,"-nodisplay", "-nosplash", "-nodesktop","-nojvm","-r",
                     "X=dlmread('"+path_to_estimators+"/temp_data.txt');cd ('"+path_to_estimators+"');k="+str(k)+";radovanovic_estimators;exit"""])
     
-    estimators = ['id_mle','id_tle','id_mom','id_ed','id_ged','id_lpca']
+    estimators = ['id_mle','id_tle','id_mom','id_ed','id_ged','id_lpca','id_mind_ml1','id_mind_mli']
     return dict(zip(estimators,
                     [np.genfromtxt(path_to_estimators+'/'+est+'.csv',delimiter=',') for est in estimators]))
 
